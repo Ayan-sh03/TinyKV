@@ -1,2 +1,4 @@
 tmp
 database.aof
+dist/
+tinykv.exe
