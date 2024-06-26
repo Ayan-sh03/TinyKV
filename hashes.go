@@ -77,6 +77,11 @@ func (ht *HashTable) Set(hashKey, field, val string) {
 					return
 				}
 			}
+			
+			
+			if len(bucket) >= ht.size {
+				bucket = bucket[1:] // Evict the oldest entry
+			}
 
 			// Swap the existing key-value pair with the new one
 			bucket = append(bucket, kv)
