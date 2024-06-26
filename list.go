@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"strconv"
 	"sync"
 )
@@ -15,13 +14,19 @@ func Lpush(args []Value) Value {
 	}
 
 	key := args[0].bulk
+	values := make([]string, len(args)-1)
+
+	// Collect values to push into a slice
+	size := len(args) - 1
+	for i := 0; i < size; i++ {
+		values[size-i-1] = args[i+1].bulk
+	}
 
 	SETLsMu.Lock()
-	for i := 0; i < len(args)-1; i++ {
-		val := args[i+1].bulk
-		SETsL[key] = append([]string{val}, SETsL[key]...)
-	}
-	SETLsMu.Unlock()
+	defer SETLsMu.Unlock()
+
+	// Append values to the beginning of SETsL[key]
+	SETsL[key] = append(values, SETsL[key]...)
 
 	return Value{typ: "string", str: "OK"}
 }
@@ -77,18 +82,20 @@ func Lrange(args []Value) Value {
 }
 
 func Rpush(args []Value) Value {
-	log.Println(args)
 	if len(args) < 2 {
-		return Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command mine"}
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'rpush' command"}
 	}
 
 	key := args[0].bulk
-	SETsMu.Lock()
+	values := []string{}
+
 	for i := 0; i < len(args)-1; i++ {
-		val := args[i+1].bulk
-		SETsL[key] = append(SETsL[key], val)
+		values = append(values, args[i+1].bulk)
 	}
-	SETsMu.Unlock()
+
+	SETLsMu.Lock()
+	SETsL[key] = append(SETsL[key], values...)
+	SETLsMu.Unlock()
 
 	return Value{typ: "string", str: "OK"}
 }
@@ -101,16 +108,15 @@ func Lpop(args []Value) Value {
 
 	key := args[0].bulk
 	SETLsMu.Lock()
-	
+
 	value, ok := SETsL[key]
 	res := value[0]
 	SETsL[key] = value[1:]
 
 	SETLsMu.Unlock()
-		if !ok {
-			return Value{typ: "null"}
-		}
-
+	if !ok {
+		return Value{typ: "null"}
+	}
 
 	return Value{typ: "bulk", bulk: res}
 }
@@ -135,5 +141,3 @@ func Rpop(args []Value) Value {
 
 	return Value{typ: "bulk", bulk: res}
 }
-
-
