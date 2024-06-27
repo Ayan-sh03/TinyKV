@@ -37,6 +37,8 @@ func NewHashTable(size int) *HashTable {
 	ht.hashFunc[1] = ht.hashFunc2
 	return ht
 }
+// These two functions, `hashFunc1` and `hashFunc2`, are hash functions used in the `HashTable` struct
+// to calculate the index of the bucket where a key-value pair should be stored or retrieved.
 func (cht *HashTable) hashFunc1(key string) int {
 	var h maphash.Hash
 	h.SetSeed(cht.seed)
@@ -51,6 +53,8 @@ func (cht *HashTable) hashFunc2(key string) int {
 	return int((h.Sum64() * 16777619) % uint64(cht.size))
 }
 
+// This `Set` method in the `HashTable` struct is responsible for adding or updating key-value pairs in
+// the hash table. Here's a breakdown of what the method does:
 func (ht *HashTable) Set(hashKey, field, val string) {
 	ht.mu.Lock()
 	defer ht.mu.Unlock()
@@ -94,35 +98,8 @@ func (ht *HashTable) Set(hashKey, field, val string) {
 	// TODO: Resize or rehash the table
 }
 
-
-// func (ht *HashTable) Set(hashKey, field, val string) {
-// 	ht.mu.Lock()
-// 	defer ht.mu.Unlock()
-
-// 	kv := &KeyValue{Key: hashKey, Field: field, Value: val}
-
-// 	for i := 0; i < 10; i++ { //limiting the number of relocations to avoid infinite loops
-// 		bucketIndex := ht.hashFunc[i%2](kv.Key)
-// 		if ht.buckets[bucketIndex] == nil {
-// 			ht.buckets[bucketIndex] = []*KeyValue{kv}
-// 			return
-// 		}
-
-// 		for j, existingKv := range ht.buckets[bucketIndex] {
-// 			if existingKv.Key == kv.Key && existingKv.Field == kv.Field {
-// 				ht.buckets[bucketIndex][j] = kv
-// 				return
-// 			}
-// 		}
-// 		ht.buckets[bucketIndex] = append(ht.buckets[bucketIndex], kv)
-
-// 		return
-// 		// TODO: Resize or rehash the table
-
-// 	}
-
-// }
-
+// The `Get` method in the `HashTable` struct is responsible for retrieving a value associated with a
+// specific key and field from the hash table. Here's a breakdown of what the method does:
 func (ht *HashTable) Get(hashKey, field string) (string, bool) {
 	ht.mu.RLock()
 	defer ht.mu.RUnlock()
@@ -141,6 +118,8 @@ func (ht *HashTable) Get(hashKey, field string) (string, bool) {
 	return "", false
 }
 
+// The `Delete` method in the `HashTable` struct is responsible for removing a specific key-value pair
+// from the hash table. Here's a breakdown of what the method does:
 func (ht *HashTable) Delete(hashKey, field string) {
 	ht.mu.Lock()
 	defer ht.mu.Unlock()
