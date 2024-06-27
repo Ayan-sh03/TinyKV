@@ -11,12 +11,6 @@ type KeyValue struct {
 	Field string
 	Value string
 }
-type HashAlgorithm int
-
-const (
-	SHA256 HashAlgorithm = iota
-	FNV1
-)
 
 type HashTable struct {
 	mu       sync.RWMutex
