@@ -18,6 +18,7 @@ type HashTable struct {
 	size     int
 	hashFunc [2]func(string) int
 	seed     maphash.Seed
+	count    int
 }
 
 func NewHashTable(size int) *HashTable {
@@ -31,6 +32,7 @@ func NewHashTable(size int) *HashTable {
 	ht.hashFunc[1] = ht.hashFunc2
 	return ht
 }
+
 // These two functions, `hashFunc1` and `hashFunc2`, are hash functions used in the `HashTable` struct
 // to calculate the index of the bucket where a key-value pair should be stored or retrieved.
 func (cht *HashTable) hashFunc1(key string) int {
@@ -54,42 +56,54 @@ func (ht *HashTable) Set(hashKey, field, val string) {
 	defer ht.mu.Unlock()
 
 	kv := &KeyValue{Key: hashKey, Field: field, Value: val}
+	original :=kv
+	for attempt := 0; attempt < 10; attempt++ {
+		// limiting the number of relocations to avoid infinite loops
+		for i := 0; i < 2; i++ {
+			bucketIndex := ht.hashFunc[i](kv.Key)
 
-	for i := 0; i < 10; i++ { // limiting the number of relocations to avoid infinite loops
-		bucketIndex := ht.hashFunc[i%2](kv.Key)
-
-		// Use linear probing to find an empty slot in the bucket
-		for j := bucketIndex; ; j = (j + 1) % len(ht.buckets) {
-			bucket := ht.buckets[j]
-
-			// Check if the bucket is empty
-			if len(bucket) == 0 {
-				ht.buckets[j] = []*KeyValue{kv}
+			if ht.buckets[bucketIndex] == nil {
+				ht.buckets[bucketIndex] = []*KeyValue{kv}
+				ht.count++
 				return
 			}
 
-			// Check if the key-value pair already exists in the bucket
-			for k, existingKv := range bucket {
+			for j,existingKv := range ht.buckets[bucketIndex]{
 				if existingKv.Key == kv.Key && existingKv.Field == kv.Field {
-					ht.buckets[j][k] = kv
+					ht.buckets[bucketIndex][j] = kv
 					return
 				}
 			}
-			
-			
-			if len(bucket) >= ht.size {
-				bucket = bucket[1:] // Evict the oldest entry
-			}
 
-			// Swap the existing key-value pair with the new one
-			bucket = append(bucket, kv)
-			ht.buckets[j] = bucket
-			kv = bucket[0]
-			bucket = bucket[1:]
+			evictedKv := ht.buckets[bucketIndex][0]
+			ht.buckets[bucketIndex][0] = kv
+			kv = evictedKv
 		}
 	}
+	ht.resize()
+	ht.Set(original.Key, original.Field, original.Value)
+	
+}
+func (ht *HashTable) resize() {
+	newSize := ht.size * 2
+	newBuckets := make([][]*KeyValue, newSize)
+	oldBuckets := ht.buckets
 
-	// TODO: Resize or rehash the table
+	// Update the size and bucket reference
+	ht.buckets = newBuckets
+	ht.size = newSize
+	ht.count = 0
+
+	// Rehash all the elements into the new bucket array
+	for _, bucket := range oldBuckets {
+		if bucket != nil {
+			for _, kv := range bucket {
+				if kv != nil {
+					ht.Set(kv.Key, kv.Field, kv.Value)
+				}
+			}
+		}
+	}
 }
 
 // The `Get` method in the `HashTable` struct is responsible for retrieving a value associated with a
@@ -100,8 +114,10 @@ func (ht *HashTable) Get(hashKey, field string) (string, bool) {
 
 	for i := 0; i < 2; i++ {
 		hash := ht.hashFunc[i](hashKey)
-		if ht.buckets[hash] != nil {
-			for _, kv := range ht.buckets[hash] {
+		bucket := ht.buckets[hash]
+		
+		if bucket != nil{
+			for _,kv := range bucket{
 				if kv.Key == hashKey && kv.Field == field {
 					return kv.Value, true
 				}
@@ -127,7 +143,7 @@ func (ht *HashTable) Delete(hashKey, field string) {
 
 			// Check if the bucket is empty
 			if len(bucket) == 0 {
-				
+
 				return
 			}
 
@@ -166,22 +182,25 @@ func (ht *HashTable) Delete(hashKey, field string) {
 	}
 }
 
-func (ht *HashTable) GetAll(hashKey string) (map[string]string, bool) {
+func (ht *HashTable) GetAll(hashKey string) (map[string]string,bool) {
 	ht.mu.RLock()
 	defer ht.mu.RUnlock()
 	result := make(map[string]string)
+	found:=false
 
-	found := false
 	for i := 0; i < 2; i++ {
-		hash := ht.hashFunc[i](hashKey)
-		for _, kv := range ht.buckets[hash] {
-			if kv.Key == hashKey {
-				log.Println(kv)
-				found = true
-				result[kv.Field] = kv.Value
+		bucketIndex := ht.hashFunc[i](hashKey)
+		bucket := ht.buckets[bucketIndex]
+
+		if bucket != nil {
+			for _, kv := range bucket {
+				if kv.Key == hashKey {
+					found = true
+					result[kv.Field] = kv.Value
+				}
 			}
 		}
 	}
 
-	return result, found
+	return result,found
 }
