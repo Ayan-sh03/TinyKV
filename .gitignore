@@ -2,3 +2,5 @@ tmp
 database.aof
 dist/
 tinykv.exe
+todos.md
+AGENTS.md

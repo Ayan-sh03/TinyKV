@@ -48,58 +48,56 @@ func (cht *HashTable) hashFunc2(key string) int {
 }
 
 func (ht *HashTable) Set(hashKey, field, val string) {
-    ht.mu.Lock()
-    defer ht.mu.Unlock()
+	ht.mu.Lock()
+	defer ht.mu.Unlock()
 
-    ht.set(hashKey, field, val)
+	ht.set(hashKey, field, val)
 }
 
 func (ht *HashTable) set(hashKey, field, val string) {
-    kv := &KeyValue{Key: hashKey, Field: field, Value: val}
-    for attempt := 0; attempt < 10; attempt++ {
-        for i := 0; i < 2; i++ {
-            bucketIndex := ht.hashFunc[i](kv.Key)
+	kv := &KeyValue{Key: hashKey, Field: field, Value: val}
+	for attempt := 0; attempt < 10; attempt++ {
+		for i := 0; i < 2; i++ {
+			bucketIndex := ht.hashFunc[i](kv.Key)
 
-            if ht.buckets[bucketIndex] == nil {
-                ht.buckets[bucketIndex] = []*KeyValue{kv}
-                ht.count++
-                return
-            }
+			if ht.buckets[bucketIndex] == nil {
+				ht.buckets[bucketIndex] = []*KeyValue{kv}
+				ht.count++
+				return
+			}
 
-            for j, existingKv := range ht.buckets[bucketIndex] {
-                if existingKv.Key == kv.Key && existingKv.Field == kv.Field {
-                    ht.buckets[bucketIndex][j] = kv
-                    return
-                }
-            }
+			for j, existingKv := range ht.buckets[bucketIndex] {
+				if existingKv.Key == kv.Key && existingKv.Field == kv.Field {
+					ht.buckets[bucketIndex][j] = kv
+					return
+				}
+			}
 
-            evictedKv := ht.buckets[bucketIndex][0]
-            ht.buckets[bucketIndex][0] = kv
-            kv = evictedKv
-        }
-    }
-    ht.resize()
-    ht.set(hashKey, field, val)
+			evictedKv := ht.buckets[bucketIndex][0]
+			ht.buckets[bucketIndex][0] = kv
+			kv = evictedKv
+		}
+	}
+	ht.resize()
+	ht.set(hashKey, field, val)
 }
 
 func (ht *HashTable) resize() {
-    newSize := ht.size * 2
-    newBuckets := make([][]*KeyValue, newSize)
-    oldBuckets := ht.buckets
+	newSize := ht.size * 2
+	newBuckets := make([][]*KeyValue, newSize)
+	oldBuckets := ht.buckets
 
-    ht.buckets = newBuckets
-    ht.size = newSize
-    ht.count = 0
+	ht.buckets = newBuckets
+	ht.size = newSize
+	ht.count = 0
 
-    for _, bucket := range oldBuckets {
-        if bucket != nil {
-            for _, kv := range bucket {
-                if kv != nil {
-                    ht.set(kv.Key, kv.Field, kv.Value)
-                }
-            }
-        }
-    }
+	for _, bucket := range oldBuckets {
+		for _, kv := range bucket {
+			if kv != nil {
+				ht.set(kv.Key, kv.Field, kv.Value)
+			}
+		}
+	}
 }
 
 func (ht *HashTable) Get(hashKey, field string) (string, bool) {
@@ -110,11 +108,9 @@ func (ht *HashTable) Get(hashKey, field string) (string, bool) {
 		hash := ht.hashFunc[i](hashKey)
 		bucket := ht.buckets[hash]
 
-		if bucket != nil {
-			for _, kv := range bucket {
-				if kv.Key == hashKey && kv.Field == field {
-					return kv.Value, true
-				}
+		for _, kv := range bucket {
+			if kv.Key == hashKey && kv.Field == field {
+				return kv.Value, true
 			}
 		}
 	}
@@ -126,7 +122,7 @@ func (ht *HashTable) Delete(hashKey, field string) {
 	ht.mu.Lock()
 	defer ht.mu.Unlock()
 	log.Println("Deleting key-value pair:", hashKey, field)
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 2; i++ { //nolint:staticcheck // SA4008: cuckoo hashing tries 2 hash functions
 		bucketIndex := ht.hashFunc[i](hashKey)
 		log.Println("Bucket index:", bucketIndex)
 		for j := bucketIndex; ; j = (j + 1) % len(ht.buckets) {
@@ -176,12 +172,10 @@ func (ht *HashTable) GetAll(hashKey string) (map[string]string, bool) {
 		bucketIndex := ht.hashFunc[i](hashKey)
 		bucket := ht.buckets[bucketIndex]
 
-		if bucket != nil {
-			for _, kv := range bucket {
-				if kv.Key == hashKey {
-					found = true
-					result[kv.Field] = kv.Value
-				}
+		for _, kv := range bucket {
+			if kv.Key == hashKey {
+				found = true
+				result[kv.Field] = kv.Value
 			}
 		}
 	}

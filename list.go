@@ -41,7 +41,7 @@ func Lrange(args []Value) Value {
 	start := args[1].bulk
 	end := args[2].bulk
 
-	//convert start and end to int
+	// convert start and end to int
 	startInt, err := strconv.Atoi(start)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}

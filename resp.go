@@ -18,7 +18,6 @@ const (
 type Value struct {
 	typ   string
 	str   string
-	num   int
 	bulk  string
 	array []Value
 }
@@ -37,13 +36,13 @@ func (r *Resp) readLine() (line []byte, n int, err error) {
 		if err != nil {
 			return nil, 0, err
 		}
-		n += 1
+		n++
 		line = append(line, b)
 		if len(line) >= 2 && line[len(line)-2] == '\r' {
 			break
 		}
 	}
-	//discard the \r\n->CRLF => \r - Carriage return \n - Line feed
+	// discard the \r\n->CRLF => \r - Carriage return \n - Line feed
 	return line[:len(line)-2], n, nil
 }
 
@@ -138,12 +137,15 @@ func (r *Resp) readBulk() (Value, error) {
 
 	bulk := make([]byte, len)
 
-	r.reader.Read(bulk)
+	if _, err := r.reader.Read(bulk); err != nil {
+		return v, err
+	}
 
 	v.bulk = string(bulk)
 
-	// Read the trailing CRLF
-	r.readLine()
+	if _, _, err := r.readLine(); err != nil {
+		return v, err
+	}
 
 	return v, nil
 }

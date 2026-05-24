@@ -10,7 +10,7 @@ func TestLpush(t *testing.T) {
 	// Reset the global state for tests
 	log.Println("Testing LPush")
 	// Test cases
-	
+
 	for k := range SETsL {
 		delete(SETsL, k)
 	}
@@ -39,7 +39,6 @@ func TestLpush(t *testing.T) {
 			want: Value{typ: "error", str: "ERR wrong number of arguments for 'lpush' command"},
 		},
 	}
-	
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -67,7 +66,7 @@ func TestLpush(t *testing.T) {
 
 func equal(a, b []string) bool {
 
-	log.Println(len(a),len(b))
+	log.Println(len(a), len(b))
 
 	if len(a) != len(b) {
 		return false
@@ -80,8 +79,6 @@ func equal(a, b []string) bool {
 	}
 	return true
 }
-
-
 
 func BenchmarkLpush(b *testing.B) {
 	// Benchmark case: Pushing to an empty list
@@ -140,10 +137,8 @@ func BenchmarkLpushExtraLarge(b *testing.B) {
 	b.StopTimer()
 }
 
-
 func TestRpush(t *testing.T) {
 	// Initialize the map
-
 
 	tests := []struct {
 		name     string
@@ -200,7 +195,7 @@ func TestRpush(t *testing.T) {
 		})
 	}
 }
-func BenchmarkRpush(b *testing.B){
+func BenchmarkRpush(b *testing.B) {
 	key := "benchmarklist"
 	value := "value"
 
