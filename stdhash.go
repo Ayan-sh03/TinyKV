@@ -66,3 +66,23 @@ func hgetall(args []Value) Value {
 
 	return Value{typ: "array", array: values}
 }
+
+func hdel(args []Value) Value {
+	if len(args) != 2 {
+		return Value{typ: "error", str: "ERR wrong number of arguments for 'hdel' command"}
+	}
+
+	hash := args[0].bulk
+	key := args[1].bulk
+
+	HSETsMu.Lock()
+	if m, ok := HSETs[hash]; ok {
+		delete(m, key)
+		if len(m) == 0 {
+			delete(HSETs, hash)
+		}
+	}
+	HSETsMu.Unlock()
+
+	return Value{typ: "string", str: "OK"}
+}

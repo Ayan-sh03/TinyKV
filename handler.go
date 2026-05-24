@@ -13,7 +13,7 @@ var Handlers = map[string]func([]Value) Value{
 	"CHSET":    hsetHT,
 	"CHGET":    hgetHT,
 	"CHGETALL": hgetallHT,
-	"CHDEL":     hdelHT,
+	"CHDEL":    hdelHT,
 	"INCR":     incr,
 	"DECR":     decr,
 	"INCRBY":   incrBy,
@@ -28,6 +28,7 @@ var Handlers = map[string]func([]Value) Value{
 	"HSET":     hset,
 	"HGET":     hget,
 	"HGETALL":  hgetall,
+	"HDEL":     hdel,
 }
 
 func ping(args []Value) Value {
@@ -114,13 +115,12 @@ func incr(args []Value) Value {
 
 	val := SETs[key]
 
-	//convert val to integer
 	i, err := strconv.Atoi(val)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}
 	}
 	INCRsMU.Lock()
-	i += 1
+	i++
 	SETs[key] = strconv.Itoa(i)
 	INCRsMU.Unlock()
 
@@ -136,13 +136,12 @@ func decr(args []Value) Value {
 
 	val := SETs[key]
 
-	//convert val to integer
 	i, err := strconv.Atoi(val)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}
 	}
 	INCRsMU.Lock()
-	i -= 1
+	i--
 	SETs[key] = strconv.Itoa(i)
 	INCRsMU.Unlock()
 
@@ -157,7 +156,7 @@ func incrBy(args []Value) Value {
 	key := args[0].bulk
 	incrementval := args[1].bulk
 
-	//convert incrementval to integer
+	// convert incrementval to integer
 	increment, err := strconv.Atoi(incrementval)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}
@@ -165,7 +164,7 @@ func incrBy(args []Value) Value {
 
 	val := SETs[key]
 
-	//convert val to integer
+	// convert val to integer
 	i, err := strconv.Atoi(val)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}
@@ -194,7 +193,7 @@ func decrBy(args []Value) Value {
 
 	val := SETs[key]
 
-	//convert val to integer
+	// convert val to integer
 	i, err := strconv.Atoi(val)
 	if err != nil {
 		return Value{typ: "error", str: "ERR: value is not an integer"}
